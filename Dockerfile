@@ -10,6 +10,7 @@ ENV NGINX_VERSION 1.14.0
 ENV LUA_MODULE_VERSION 0.10.13
 ENV DEVEL_KIT_MODULE_VERSION 0.3.0
 ENV HTTP_AUTH_PAM_MODULE_VERSION 1.5.1
+ENV NGINX_DAV_EXT_MODULE_VERSION 3.0.0
 ENV LUAJIT_LIB=/usr/lib
 ENV LUAJIT_INC=/usr/include/luajit-2.1
 
@@ -66,9 +67,10 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
     --add-module=/usr/src/ngx_devel_kit-$DEVEL_KIT_MODULE_VERSION \
     --add-module=/usr/src/lua-nginx-module-$LUA_MODULE_VERSION \
     --add-module=/usr/src/ngx_http_auth_pam_module-$HTTP_AUTH_PAM_MODULE_VERSION \
+    --add-module=/usr/src/nginx-dav-ext-module-$NGINX_DAV_EXT_MODULE_VERSION \
   " \
-  && addgroup -S nginx \
-  && adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \ 
+  && addgroup -g501 -S nginx \
+  && adduser -u 501 -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \ 
   && apk add --no-cache --virtual .build-deps \
     autoconf \
     gcc \
@@ -91,6 +93,7 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   && curl -fSL https://github.com/simpl/ngx_devel_kit/archive/v$DEVEL_KIT_MODULE_VERSION.tar.gz -o ndk.tar.gz \
   && curl -fSL https://github.com/openresty/lua-nginx-module/archive/v$LUA_MODULE_VERSION.tar.gz -o lua.tar.gz \
   && curl -fSL https://github.com/sto/ngx_http_auth_pam_module/archive/v$HTTP_AUTH_PAM_MODULE_VERSION.tar.gz -o http_auth_pam.tar.gz \
+  && curl -fSL https://github.com/arut/nginx-dav-ext-module/archive/v$NGINX_DAV_EXT_MODULE_VERSION.tar.gz -o nginx-dav-ext-module.tar.gz \
   && export GNUPGHOME="$(mktemp -d)" \
   && found=''; \
   for server in \
@@ -110,7 +113,8 @@ RUN GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
   && tar -zxC /usr/src -f ndk.tar.gz \
   && tar -zxC /usr/src -f lua.tar.gz \
   && tar -zxC /usr/src -f http_auth_pam.tar.gz \
-  && rm nginx.tar.gz ndk.tar.gz lua.tar.gz http_auth_pam.tar.gz \ 
+  && tar -zxC /usr/src -f nginx-dav-ext-module.tar.gz \
+  && rm nginx.tar.gz ndk.tar.gz lua.tar.gz http_auth_pam.tar.gz nginx-dav-ext-module.tar.gz \ 
   && cd /usr/src/nginx-$NGINX_VERSION \
   && ./configure $CONFIG --with-debug \
   && make -j$(getconf _NPROCESSORS_ONLN) \
@@ -201,6 +205,7 @@ RUN echo @testing http://nl.alpinelinux.org/alpine/edge/testing >> /etc/apk/repo
     #curl iconv session
     #docker-php-ext-install pdo_mysql pdo_sqlite mysqli mcrypt gd exif intl xsl json soap dom zip opcache && \
     docker-php-ext-install iconv pdo_mysql pdo_sqlite mysqli gd exif intl xsl json soap dom zip opcache && \
+    docker-php-ext-enable mysqli && \
     #pecl install xdebug && \
     docker-php-source delete && \
     mkdir -p /etc/nginx && \
